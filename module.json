@@ -16,9 +16,17 @@
       }
     ]
   },
+  "start": {
+    "runtime": "electron-node",
+    "script": "server.js",
+    "args": [],
+    "env": { "DEVWIN_PORT": "8811" },
+    "health": { "url": "http://127.0.0.1:8811/health", "timeout_s": 15 }
+  },
   "artifacts": [
     {
       "file": "dev-window-PLACEHOLDER.zip",
+      "type": "zip",
       "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "size": 1,
       "args": []

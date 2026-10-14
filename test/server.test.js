@@ -183,4 +183,19 @@ test("module.json відповідає правилам валідатора п�
   }
   assert.strictEqual(new URL(m.plugin.tabs[0].url).port, "8811");   // типовий порт з README
   assert.match(m.artifacts[0].sha256, /^0{64}$/);
+
+  // Контракт start (Hub Shell)
+  const st = m.start;
+  assert.strictEqual(st.runtime, "electron-node");
+  assert.strictEqual(st.script, "server.js");
+  assert.ok(fs.existsSync(path.join(__dirname, "..", st.script)));
+  for (const [k, v] of Object.entries(st.env || {})) {
+    assert.match(k, /^[A-Z][A-Z0-9_]*$/);
+    assert.strictEqual(typeof v, "string");
+    assert.ok(!/TOKEN|SECRET|PASSWORD|KEY/i.test(k));
+  }
+  assert.strictEqual(st.env.DEVWIN_PORT, "8811");
+  assert.ok(!("DEVWIN_REPO" in st.env));   // шлях до репо задає користувач, не маніфест
+  assert.strictEqual(st.health.url, "http://127.0.0.1:8811/health");
+  assert.ok(Number.isInteger(st.health.timeout_s) && st.health.timeout_s >= 5 && st.health.timeout_s <= 120);
 });

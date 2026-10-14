@@ -1,0 +1,72 @@
+# Реліз модуля dev-window за контрактом module-release.
+# Запускається ЛИШЕ на push тега vX.Y.Z. Секретів немає, лише github.token.
+# Порядок: перевірка тега -> zip -> sha256 -> артефакт у реліз -> module.json ОСТАННІМ.
+# module.json публікується БЕЗ підпису (підписує власник локальним ключем).
+name: release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Перевірити, що тег збігається з версією
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          node -e '
+            const v = process.argv[1];
+            const m = require("./module.json"), p = require("./package.json");
+            if (m.name !== "dev-window") throw new Error("name у module.json != dev-window");
+            if (m.version !== v) throw new Error("тег " + v + " != module.json " + m.version);
+            if (p.version !== v) throw new Error("тег " + v + " != package.json " + p.version);
+            console.log("OK", v);
+          ' "$VERSION"
+
+      - name: Тести
+        run: npm test
+
+      - name: Зібрати zip
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          zip "dist/dev-window-${VERSION}.zip" server.js module.json package.json README.md
+
+      - name: Згенерувати module.json (без підпису, з sha256)
+        run: |
+          set -euo pipefail
+          ART="dist/dev-window-${VERSION}.zip"
+          SHA=$(sha256sum "$ART" | cut -d' ' -f1)
+          SIZE=$(stat -c %s "$ART")
+          node -e '
+            const fs = require("fs");
+            const [art, sha, size, ver] = process.argv.slice(1);
+            const m = JSON.parse(fs.readFileSync("module.json", "utf8"));
+            m.version = ver;
+            m.artifacts = [{ file: require("path").basename(art), type: "zip", sha256: sha, size: Number(size), args: [] }];
+            m.signature = "";
+            delete m.notes;
+            fs.writeFileSync("dist/module.json", JSON.stringify(m, null, 2) + "\n");
+          ' "$ART" "$SHA" "$SIZE" "$VERSION"
+
+      - name: Опублікувати артефакт, потім module.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" "dist/dev-window-${VERSION}.zip" \
+            --title "dev-window ${VERSION}" --notes "Реліз dev-window ${VERSION}"
+          # module.json — останнім, щоб Hub не бачив версію без файлу.
+          gh release upload "${GITHUB_REF_NAME}" dist/module.json
