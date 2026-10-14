@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "name": "dev-window",
+  "version": "0.1.0",
+  "kind": "plugin",
+  "run_as": "session",
+  "channel": "stable",
+  "plugin": {
+    "tabs": [
+      {
+        "id": "dev-window.main",
+        "label": "Вікно розробки",
+        "group": "plugins",
+        "route": "/plugins/dev-window",
+        "url": "http://127.0.0.1:8811/"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "file": "dev-window-PLACEHOLDER.zip",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "size": 1,
+      "args": []
+    }
+  ],
+  "signature": "",
+  "requires": { "hub_api": ">=2" },
+  "update": { "restart": true, "needs_idle": true },
+  "notes": "ШАБЛОН: artifacts, sha256, size і signature — плейсхолдери; заповнюються під час випуску релізу."
+}
